@@ -179,6 +179,22 @@
             z-index: 1;
         }
 
+        .fee-deduction-note {
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+            color: #ffd700;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
         /* Payment Info */
         .payment-section {
             background: rgba(20, 20, 20, 0.8);
@@ -367,20 +383,21 @@
 
         .time-slots {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
             margin-top: 10px;
         }
 
         .time-slot {
-            padding: 12px;
+            padding: 15px;
             background: rgba(0, 0, 0, 0.5);
             border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 8px;
+            border-radius: 10px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
             font-weight: 600;
+            font-size: 1.1rem;
         }
 
         .time-slot:hover:not(.disabled) {
@@ -393,6 +410,7 @@
             color: #000;
             border-color: #ffd700;
             font-weight: 700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
         }
 
         .time-slot.disabled {
@@ -402,10 +420,16 @@
             background: rgba(50, 50, 50, 0.3);
         }
 
-        .time-slot.lunch {
-            background: rgba(255, 0, 0, 0.1);
-            border-color: rgba(255, 0, 0, 0.3);
-            color: #ff6666;
+        .slot-duration {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .time-slot.selected .slot-duration {
+            color: #000;
+            font-weight: 600;
         }
 
         /* Submit Button */
@@ -591,8 +615,9 @@
         @media (max-width: 600px) {
             h1 { font-size: 1.8rem; }
             .datetime-grid { grid-template-columns: 1fr; }
-            .time-slots { grid-template-columns: repeat(2, 1fr); }
+            .time-slots { grid-template-columns: 1fr; }
             .form-container { padding: 20px; }
+            .fee-amount { font-size: 2.5rem; }
         }
 
         /* Error Message */
@@ -616,12 +641,19 @@
             border-radius: 0 10px 10px 0;
             color: #ccc;
             font-size: 0.95rem;
+            line-height: 1.6;
         }
 
         .note strong {
             color: #ffd700;
         }
+
+        .highlight {
+            color: #ffd700;
+            font-weight: 600;
+        }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="bg-animation"></div>
@@ -639,8 +671,12 @@
 
         <!-- Reservation Fee Banner -->
         <div class="fee-banner">
-            <div class="fee-amount">₱100.00</div>
+            <div class="fee-amount">₱50.00</div>
             <div class="fee-label">Reservation Fee Required</div>
+            <div class="fee-deduction-note">
+                <span>💡</span>
+                <span>This fee will be <strong>deducted</strong> from your total service bill</span>
+            </div>
         </div>
 
         <!-- Payment Information -->
@@ -741,22 +777,41 @@
             </div>
 
             <div class="form-group" style="margin-top: 20px;">
-                <label>Select Time Slot *</label>
+                <label>Select Time Slot * <span style="color: #888; font-size: 0.85rem; text-transform: none; font-weight: 400;">(1.5 hours per session)</span></label>
                 <div class="time-slots" id="timeSlots">
-                    <div class="time-slot" data-time="09:00 AM" onclick="selectTime(this)">09:00 AM</div>
-                    <div class="time-slot" data-time="10:00 AM" onclick="selectTime(this)">10:00 AM</div>
-                    <div class="time-slot" data-time="11:00 AM" onclick="selectTime(this)">11:00 AM</div>
-                    <div class="time-slot lunch" data-time="12:00 PM" onclick="selectTime(this)">12:00 PM<br><small>(Lunch)</small></div>
-                    <div class="time-slot" data-time="02:00 PM" onclick="selectTime(this)">02:00 PM</div>
-                    <div class="time-slot" data-time="03:00 PM" onclick="selectTime(this)">03:00 PM</div>
-                    <div class="time-slot" data-time="04:00 PM" onclick="selectTime(this)">04:00 PM</div>
-                    <div class="time-slot" data-time="05:00 PM" onclick="selectTime(this)">05:00 PM</div>
+                    <div class="time-slot" data-time="09:00 AM" data-end="10:30 AM" onclick="selectTime(this)">
+                        09:00 AM
+                        <div class="slot-duration">Ends 10:30 AM</div>
+                    </div>
+                    <div class="time-slot" data-time="10:30 AM" data-end="12:00 PM" onclick="selectTime(this)">
+                        10:30 AM
+                        <div class="slot-duration">Ends 12:00 PM</div>
+                    </div>
+                    <div class="time-slot" data-time="12:00 PM" data-end="01:30 PM" onclick="selectTime(this)">
+                        12:00 PM
+                        <div class="slot-duration">Ends 01:30 PM</div>
+                    </div>
+                    <div class="time-slot" data-time="01:30 PM" data-end="03:00 PM" onclick="selectTime(this)">
+                        01:30 PM
+                        <div class="slot-duration">Ends 03:00 PM</div>
+                    </div>
+                    <div class="time-slot" data-time="03:00 PM" data-end="04:30 PM" onclick="selectTime(this)">
+                        03:00 PM
+                        <div class="slot-duration">Ends 04:30 PM</div>
+                    </div>
+                    <div class="time-slot" data-time="04:30 PM" data-end="06:00 PM" onclick="selectTime(this)">
+                        04:30 PM
+                        <div class="slot-duration">Ends 06:00 PM</div>
+                    </div>
                 </div>
                 <div class="error-msg" id="timeError" style="text-align: center; margin-top: 10px;">Please select a time slot</div>
             </div>
 
             <div class="note">
-                <strong>Note:</strong> Each service takes approximately 1 hour to complete. Please arrive 10 minutes before your scheduled time. Shop hours: 9:00 AM - 6:00 PM (Break: 12:00 PM - 1:00 PM).
+                <strong>Shop Hours:</strong> 9:00 AM - 6:00 PM<br>
+                <strong>Session Duration:</strong> Each service takes <span class="highlight">1.5 hours</span> including prep and buffer time for our staff.<br>
+                <strong>Capacity:</strong> We accommodate <span class="highlight">6 services per day</span> to ensure quality work.<br>
+                Please arrive <span class="highlight">10 minutes before</span> your scheduled time.
             </div>
 
             <div class="spinner" id="loadingSpinner"></div>
@@ -789,13 +844,22 @@
                     <span id="modalTime">-</span>
                 </div>
                 <div class="detail-row">
+                    <span class="detail-label">Duration:</span>
+                    <span>1.5 hours</span>
+                </div>
+                <div class="detail-row">
                     <span class="detail-label">Name:</span>
                     <span id="modalName">-</span>
+                </div>
+                <div class="detail-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,215,0,0.2);">
+                    <span class="detail-label">Reservation Fee:</span>
+                    <span style="color: #ffd700;">₱50.00 (Deductible)</span>
                 </div>
             </div>
             
             <p style="color: #888; font-size: 0.9rem; margin-top: 15px;">
-                Please screenshot this ticket. Present it upon arrival.
+                Please screenshot this ticket. Present it upon arrival.<br>
+                Your ₱50 reservation fee will be deducted from the total bill.
             </p>
             
             <button class="close-modal" onclick="closeModal()">Close</button>
@@ -809,7 +873,7 @@
 
         let selectedService = null;
         let selectedTime = null;
-        let bookedSlots = {}; // This will store booked slots (in real implementation, fetch from Google Sheets)
+        let bookedSlots = {};
 
         function selectService(element) {
             document.querySelectorAll('.service-card').forEach(card => card.classList.remove('selected'));
@@ -822,7 +886,7 @@
         }
 
         function selectTime(element) {
-            if (element.classList.contains('disabled') || element.classList.contains('lunch')) return;
+            if (element.classList.contains('disabled')) return;
             
             document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected'));
             element.classList.add('selected');
@@ -836,22 +900,25 @@
         });
 
         async function checkAvailability(date) {
-            // In production, this would fetch from your Google Apps Script
-            // For now, we'll simulate checking availability
-            
+            // Reset all slots
             const slots = document.querySelectorAll('.time-slot');
             slots.forEach(slot => {
                 slot.classList.remove('disabled', 'selected');
-                if (selectedTime === slot.dataset.time) {
-                    selectedTime = null;
-                }
             });
+            
+            if (selectedTime) {
+                selectedTime = null;
+            }
 
-            // Simulate API call to check booked slots
-            // In real implementation: 
-            // const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL?action=check&date=' + date);
-            // const booked = await response.json();
-            // booked.forEach(time => disableSlot(time));
+            // In production, fetch from Google Apps Script
+            // const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+            // try {
+            //     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&date=${date}`);
+            //     const bookedTimes = await response.json();
+            //     bookedTimes.forEach(time => disableSlot(time));
+            // } catch (error) {
+            //     console.error('Error checking availability:', error);
+            // }
         }
 
         function disableSlot(time) {
@@ -968,8 +1035,10 @@
                 refNumber: document.getElementById('refNumber').value.trim(),
                 service: selectedService.name,
                 servicePrice: selectedService.price,
+                reservationFee: 50,
                 appointmentDate: document.getElementById('appointmentDate').value,
                 appointmentTime: selectedTime,
+                duration: '1.5 hours',
                 status: 'Confirmed'
             };
 
