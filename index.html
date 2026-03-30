@@ -652,8 +652,19 @@
             color: #ffd700;
             font-weight: 600;
         }
+
+        /* Debug info */
+        .debug-info {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6666;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            display: none;
+        }
     </style>
-<base target="_blank">
 </head>
 <body>
     <div class="bg-animation"></div>
@@ -773,6 +784,7 @@
                     <label for="appointmentDate">Select Date *</label>
                     <input type="date" id="appointmentDate" required min="">
                     <div class="error-msg" id="dateError">Please select a date</div>
+                    <div class="debug-info" id="dateDebug"></div>
                 </div>
             </div>
 
@@ -867,13 +879,15 @@
     </div>
 
     <script>
+        // YOUR GOOGLE APPS SCRIPT URL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydP4l946_4YQwOuR-vIda8YatGjwOB4EuXbxd1kwcoSrSY1loNAW4EIYGCIy7-mXN1/exec';
+
         // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('appointmentDate').min = today;
 
         let selectedService = null;
         let selectedTime = null;
-        let bookedSlots = {};
 
         function selectService(element) {
             document.querySelectorAll('.service-card').forEach(card => card.classList.remove('selected'));
@@ -910,15 +924,48 @@
                 selectedTime = null;
             }
 
-            // In production, fetch from Google Apps Script
-            // const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxQnXwwm_DBtw_fAJ6Yz3rRM2Qr4nfQJuK5lQ0-2ebxC_NFtJ-QYYyLdxH8T-78I-cy/exec';
-            // try {
-            //     const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&date=${date}`);
-            //     const bookedTimes = await response.json();
-            //     bookedTimes.forEach(time => disableSlot(time));
-            // } catch (error) {
-            //     console.error('Error checking availability:', error);
-            // }
+            if (!date) return;
+
+            try {
+                console.log('Checking availability for:', date);
+                
+                // Use no-cors mode to handle CORS issues
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&date=${date}`, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Availability result:', result);
+                
+                if (result.success && result.bookedSlots) {
+                    // Disable booked slots
+                    result.bookedSlots.forEach(time => disableSlot(time));
+                    console.log(`Found ${result.bookedSlots.length} booked slots for ${date}`);
+                } else if (result.error) {
+                    console.error('API Error:', result.error);
+                    showDebugInfo(`API Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error checking availability:', error);
+                showDebugInfo(`Connection error: ${error.message}. Will allow all slots.`);
+                // Don't block the user - just log the error and allow booking
+            }
+        }
+
+        function showDebugInfo(message) {
+            const debugDiv = document.getElementById('dateDebug');
+            debugDiv.textContent = message;
+            debugDiv.style.display = 'block';
+            setTimeout(() => {
+                debugDiv.style.display = 'none';
+            }, 5000);
         }
 
         function disableSlot(time) {
@@ -1043,34 +1090,36 @@
             };
 
             try {
-                // IMPORTANT: Replace with your Google Apps Script Web App URL
-                const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+                console.log('Submitting booking:', formData);
                 
-                // For demonstration, we'll simulate the API call
-                // In production, uncomment the fetch code below:
-                
-                /*
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(formData),
+                    redirect: 'follow'
                 });
+                
+                console.log('Submit response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
+                console.log('Submit result:', result);
                 
                 if (result.success) {
                     showSuccessModal(formData);
                 } else {
-                    alert('Error: ' + result.message);
+                    alert('Error: ' + (result.message || 'Unknown error'));
+                    // If slot is taken, refresh availability
+                    if (result.message && result.message.includes('already booked')) {
+                        checkAvailability(formData.appointmentDate);
+                    }
                 }
-                */
-
-                // Simulation (remove in production)
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                console.log('Data to be sent to Google Sheets:', formData);
-                showSuccessModal(formData);
 
             } catch (error) {
-                console.error('Error:', error);
-                alert('There was an error submitting your booking. Please try again.');
+                console.error('Error submitting booking:', error);
+                alert('There was an error submitting your booking. Please try again. Error: ' + error.message);
             } finally {
                 submitBtn.disabled = false;
                 spinner.style.display = 'none';
