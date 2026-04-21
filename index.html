@@ -131,6 +131,56 @@
             text-transform: uppercase;
         }
 
+        /* Real-time Clock */
+        .live-clock {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .clock-icon {
+            font-size: 1.5rem;
+        }
+
+        .clock-time {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            color: #ffd700;
+            letter-spacing: 2px;
+        }
+
+        .clock-date {
+            color: #aaa;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .clock-status {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: #4ade80;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .clock-status.closed {
+            background: rgba(255, 0, 0, 0.1);
+            border-color: rgba(255, 0, 0, 0.3);
+            color: #f87171;
+        }
+
         /* Reservation Fee Banner */
         .fee-banner {
             background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
@@ -400,7 +450,7 @@
             font-size: 1.1rem;
         }
 
-        .time-slot:hover:not(.disabled) {
+        .time-slot:hover:not(.disabled):not(.past) {
             border-color: #ffd700;
             background: rgba(255, 215, 0, 0.1);
         }
@@ -420,6 +470,29 @@
             background: rgba(50, 50, 50, 0.3);
         }
 
+        .time-slot.past {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            position: relative;
+        }
+
+        .time-slot.past::after {
+            content: 'CLOSED';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.7rem;
+            color: #ff4444;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
         .slot-duration {
             font-size: 0.75rem;
             color: #888;
@@ -430,6 +503,10 @@
         .time-slot.selected .slot-duration {
             color: #000;
             font-weight: 600;
+        }
+
+        .time-slot.past .slot-duration {
+            color: #ff6666;
         }
 
         /* Submit Button */
@@ -618,6 +695,7 @@
             .time-slots { grid-template-columns: 1fr; }
             .form-container { padding: 20px; }
             .fee-amount { font-size: 2.5rem; }
+            .clock-time { font-size: 1.4rem; }
         }
 
         /* Error Message */
@@ -664,7 +742,35 @@
             font-size: 0.85rem;
             display: none;
         }
+
+        /* Time slot legend */
+        .slot-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 2px solid;
+        }
+
+        .legend-available { border-color: rgba(255, 215, 0, 0.3); background: rgba(0, 0, 0, 0.5); }
+        .legend-booked { border-color: #333; background: rgba(50, 50, 50, 0.3); opacity: 0.5; }
+        .legend-past { border-color: #ff4444; background: rgba(255, 68, 68, 0.1); }
+        .legend-selected { border-color: #ffd700; background: #ffd700; }
     </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
@@ -681,7 +787,15 @@
             </div>
         </div>
 
-        <!-- Reservation Fee Banner -->
+        <!-- Real-time Live Clock -->
+        <div class="live-clock" id="liveClock">
+            <span class="clock-icon">🕐</span>
+            <div>
+                <div class="clock-time" id="clockTime">--:--:--</div>
+                <div class="clock-date" id="clockDate">Loading...</div>
+            </div>
+            <span class="clock-status" id="shopStatus">Checking...</span>
+        </div>
 
         <!-- Shop Address -->
         <div class="payment-section" style="border-color: rgba(255, 215, 0, 0.5);">
@@ -698,7 +812,7 @@
             </div>
         </div>
 
-
+        <!-- Reservation Fee Banner -->
         <div class="fee-banner">
             <div class="fee-amount">₱50.00</div>
             <div class="fee-label">Reservation Fee Required</div>
@@ -809,32 +923,52 @@
             <div class="form-group" style="margin-top: 20px;">
                 <label>Select Time Slot * <span style="color: #888; font-size: 0.85rem; text-transform: none; font-weight: 400;">(1.5 hours per session)</span></label>
                 <div class="time-slots" id="timeSlots">
-                    <div class="time-slot" data-time="09:00 AM" data-end="10:30 AM" onclick="selectTime(this)">
+                    <div class="time-slot" data-time="09:00 AM" data-end="10:30 AM" data-start-min="540" onclick="selectTime(this)">
                         09:00 AM
                         <div class="slot-duration">Ends 10:30 AM</div>
                     </div>
-                    <div class="time-slot" data-time="10:30 AM" data-end="12:00 PM" onclick="selectTime(this)">
+                    <div class="time-slot" data-time="10:30 AM" data-end="12:00 PM" data-start-min="630" onclick="selectTime(this)">
                         10:30 AM
                         <div class="slot-duration">Ends 12:00 PM</div>
                     </div>
-                    <div class="time-slot" data-time="12:00 PM" data-end="01:30 PM" onclick="selectTime(this)">
+                    <div class="time-slot" data-time="12:00 PM" data-end="01:30 PM" data-start-min="720" onclick="selectTime(this)">
                         12:00 PM
                         <div class="slot-duration">Ends 01:30 PM</div>
                     </div>
-                    <div class="time-slot" data-time="01:30 PM" data-end="03:00 PM" onclick="selectTime(this)">
+                    <div class="time-slot" data-time="01:30 PM" data-end="03:00 PM" data-start-min="810" onclick="selectTime(this)">
                         01:30 PM
                         <div class="slot-duration">Ends 03:00 PM</div>
                     </div>
-                    <div class="time-slot" data-time="03:00 PM" data-end="04:30 PM" onclick="selectTime(this)">
+                    <div class="time-slot" data-time="03:00 PM" data-end="04:30 PM" data-start-min="900" onclick="selectTime(this)">
                         03:00 PM
                         <div class="slot-duration">Ends 04:30 PM</div>
                     </div>
-                    <div class="time-slot" data-time="04:30 PM" data-end="06:00 PM" onclick="selectTime(this)">
+                    <div class="time-slot" data-time="04:30 PM" data-end="06:00 PM" data-start-min="990" onclick="selectTime(this)">
                         04:30 PM
                         <div class="slot-duration">Ends 06:00 PM</div>
                     </div>
                 </div>
                 <div class="error-msg" id="timeError" style="text-align: center; margin-top: 10px;">Please select a time slot</div>
+                
+                <!-- Legend -->
+                <div class="slot-legend">
+                    <div class="legend-item">
+                        <div class="legend-box legend-available"></div>
+                        <span>Available</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box legend-booked"></div>
+                        <span>Booked</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box legend-past"></div>
+                        <span>Past/Closed</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box legend-selected"></div>
+                        <span>Selected</span>
+                    </div>
+                </div>
             </div>
 
             <div class="note">
@@ -899,7 +1033,7 @@
 
     <script>
         // YOUR GOOGLE APPS SCRIPT URL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydP4l946_4YQwOuR-vIda8YatGjwOB4EuXbxd1kwcoSrSY1loNAW4EIYGCIy7-mXN1/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcd6Ulrt5kv09n1DXf19JPuuxXmSG2UYtPHWgV5IBCmAYcdA5Kh3KUK5ztMpW5ubH0/exec';
 
         // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
@@ -907,7 +1041,101 @@
 
         let selectedService = null;
         let selectedTime = null;
+        let currentDate = new Date();
 
+        // ==================== REAL-TIME CLOCK ====================
+        function updateClock() {
+            const now = new Date();
+            currentDate = now;
+            
+            // Update time display
+            const timeStr = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            document.getElementById('clockTime').textContent = timeStr;
+            
+            // Update date display
+            const dateStr = now.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.getElementById('clockDate').textContent = dateStr;
+            
+            // Update shop status
+            const hour = now.getHours();
+            const isOpen = hour >= 9 && hour < 18;
+            const statusEl = document.getElementById('shopStatus');
+            if (isOpen) {
+                statusEl.textContent = 'OPEN NOW';
+                statusEl.classList.remove('closed');
+            } else {
+                statusEl.textContent = 'CLOSED';
+                statusEl.classList.add('closed');
+            }
+            
+            // Check if we need to refresh time slots (if today is selected)
+            const selectedDate = document.getElementById('appointmentDate').value;
+            const todayStr = now.toISOString().split('T')[0];
+            if (selectedDate === todayStr) {
+                applyRealTimeConstraints();
+            }
+        }
+
+        // Start clock
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // ==================== REAL-TIME SLOT VALIDATION ====================
+        function getMinutesFromTime(timeStr) {
+            // Convert time like "09:00 AM" to minutes since midnight
+            const [time, period] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+        }
+
+        function applyRealTimeConstraints() {
+            const now = new Date();
+            const selectedDate = document.getElementById('appointmentDate').value;
+            const todayStr = now.toISOString().split('T')[0];
+            
+            // Only apply if today is selected
+            if (selectedDate !== todayStr) {
+                // Remove all past constraints if not today
+                document.querySelectorAll('.time-slot').forEach(slot => {
+                    slot.classList.remove('past');
+                });
+                return;
+            }
+            
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            
+            document.querySelectorAll('.time-slot').forEach(slot => {
+                const slotStartMin = parseInt(slot.dataset.startMin);
+                
+                // If current time is past the slot start time, mark as past
+                // Add 15 minutes buffer (can't book if less than 15 mins before slot)
+                if (currentMinutes >= slotStartMin - 15) {
+                    slot.classList.add('past');
+                    if (selectedTime === slot.dataset.time) {
+                        selectedTime = null;
+                        slot.classList.remove('selected');
+                    }
+                } else {
+                    slot.classList.remove('past');
+                }
+            });
+        }
+
+        // ==================== EXISTING FUNCTIONS ====================
         function selectService(element) {
             document.querySelectorAll('.service-card').forEach(card => card.classList.remove('selected'));
             element.classList.add('selected');
@@ -919,7 +1147,7 @@
         }
 
         function selectTime(element) {
-            if (element.classList.contains('disabled')) return;
+            if (element.classList.contains('disabled') || element.classList.contains('past')) return;
             
             document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected'));
             element.classList.add('selected');
@@ -945,10 +1173,12 @@
 
             if (!date) return;
 
+            // Apply real-time constraints first
+            applyRealTimeConstraints();
+
             try {
                 console.log('Checking availability for:', date);
                 
-                // Use no-cors mode to handle CORS issues
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&date=${date}`, {
                     method: 'GET',
                     redirect: 'follow'
@@ -964,7 +1194,7 @@
                 console.log('Availability result:', result);
                 
                 if (result.success && result.bookedSlots) {
-                    // Disable booked slots
+                    // Disable booked slots (but don't override past slots)
                     result.bookedSlots.forEach(time => disableSlot(time));
                     console.log(`Found ${result.bookedSlots.length} booked slots for ${date}`);
                 } else if (result.error) {
@@ -974,7 +1204,6 @@
             } catch (error) {
                 console.error('Error checking availability:', error);
                 showDebugInfo(`Connection error: ${error.message}. Will allow all slots.`);
-                // Don't block the user - just log the error and allow booking
             }
         }
 
@@ -989,7 +1218,7 @@
 
         function disableSlot(time) {
             const slot = document.querySelector(`.time-slot[data-time="${time}"]`);
-            if (slot) {
+            if (slot && !slot.classList.contains('past')) {
                 slot.classList.add('disabled');
                 if (selectedTime === time) {
                     selectedTime = null;
@@ -1072,6 +1301,20 @@
                 document.getElementById('timeError').style.display = 'none';
             }
 
+            // Extra validation: ensure selected time is not in the past
+            if (selectedTime && date) {
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                if (date === todayStr) {
+                    const slotEl = document.querySelector(`.time-slot[data-time="${selectedTime}"]`);
+                    if (slotEl && slotEl.classList.contains('past')) {
+                        document.getElementById('timeError').textContent = 'This time slot has already passed. Please select a future time.';
+                        document.getElementById('timeError').style.display = 'block';
+                        isValid = false;
+                    }
+                }
+            }
+
             return isValid;
         }
 
@@ -1133,7 +1376,6 @@
                     showSuccessModal(formData);
                 } else {
                     alert('Error: ' + (result.message || 'Unknown error'));
-                    // If slot is taken, refresh availability
                     if (result.message && result.message.includes('already booked')) {
                         checkAvailability(formData.appointmentDate);
                     }
@@ -1162,7 +1404,7 @@
             document.getElementById('successModal').classList.remove('active');
             document.getElementById('bookingForm').reset();
             document.querySelectorAll('.service-card').forEach(card => card.classList.remove('selected'));
-            document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected'));
+            document.querySelectorAll('.time-slot').forEach(slot => slot.classList.remove('selected', 'disabled', 'past'));
             selectedService = null;
             selectedTime = null;
         }
