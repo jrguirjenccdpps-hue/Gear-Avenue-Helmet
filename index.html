@@ -665,6 +665,7 @@
             display: none;
         }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="bg-animation"></div>
@@ -681,6 +682,23 @@
         </div>
 
         <!-- Reservation Fee Banner -->
+
+        <!-- Shop Address -->
+        <div class="payment-section" style="border-color: rgba(255, 215, 0, 0.5);">
+            <div class="section-title">
+                <span>📍</span> Shop Location
+            </div>
+            <div style="background: rgba(0,0,0,0.4); border-radius: 10px; padding: 20px; border: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 1.2rem; color: #fff; font-weight: 600; margin-bottom: 8px;">
+                    Purok 4, Maahas, Los Baños
+                </div>
+                <div style="color: #ffd700; font-size: 1rem; font-weight: 500;">
+                    Landmark: Tapat ng Honda Desmark, katabi ng M Lhuillier
+                </div>
+            </div>
+        </div>
+
+
         <div class="fee-banner">
             <div class="fee-amount">₱50.00</div>
             <div class="fee-label">Reservation Fee Required</div>
@@ -820,6 +838,7 @@
             </div>
 
             <div class="note">
+                <strong>Shop Address:</strong> Purok 4, Maahas, Los Baños (Tapat ng Honda Desmark, katabi ng M Lhuillier)<br>
                 <strong>Shop Hours:</strong> 9:00 AM - 6:00 PM<br>
                 <strong>Session Duration:</strong> Each service takes <span class="highlight">1.5 hours</span> including prep and buffer time for our staff.<br>
                 <strong>Capacity:</strong> We accommodate <span class="highlight">6 services per day</span> to ensure quality work.<br>
@@ -1094,6 +1113,9 @@
                 
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
                     body: JSON.stringify(formData),
                     redirect: 'follow'
                 });
