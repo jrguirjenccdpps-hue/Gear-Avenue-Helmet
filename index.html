@@ -770,8 +770,6 @@
         .legend-past { border-color: #ff4444; background: rgba(255, 68, 68, 0.1); }
         .legend-selected { border-color: #ffd700; background: #ffd700; }
     </style>
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
     <div class="bg-animation"></div>
@@ -1033,7 +1031,7 @@
 
     <script>
         // YOUR GOOGLE APPS SCRIPT URL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbys4RY8iDaNOpOCUC2qmvj0lSYj8J9qafX0zlHG_F9mGdcIv5UvgpZeEfKzB0Kn8NMZ/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby6PyIWjoMQXiVydCyRH6OSPoALp8VcKAxThkn04r3CmEzEO11sTyG9IC4robHFL6eW/exec';
 
         // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
@@ -1179,7 +1177,12 @@
             try {
                 console.log('Checking availability for:', date);
                 
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=check&date=${date}`, {
+                // FIX: Use no-cors mode and proper URL construction
+                const url = new URL(GOOGLE_SCRIPT_URL);
+                url.searchParams.append('action', 'check');
+                url.searchParams.append('date', date);
+                
+                const response = await fetch(url.toString(), {
                     method: 'GET',
                     redirect: 'follow'
                 });
@@ -1217,14 +1220,39 @@
         }
 
         function disableSlot(time) {
-            const slot = document.querySelector(`.time-slot[data-time="${time}"]`);
+            // FIX: Normalize the time from server to match HTML data-time format
+            const normalizedTime = normalizeTimeForMatch(time);
+            const slot = document.querySelector(`.time-slot[data-time="${normalizedTime}"]`);
             if (slot && !slot.classList.contains('past')) {
                 slot.classList.add('disabled');
-                if (selectedTime === time) {
+                if (selectedTime === normalizedTime) {
                     selectedTime = null;
                     slot.classList.remove('selected');
                 }
             }
+        }
+
+        // FIX: Normalize time to match HTML data-time format (HH:MM AM/PM with leading zero)
+        function normalizeTimeForMatch(timeStr) {
+            if (!timeStr) return '';
+            const trimmed = String(timeStr).trim().toUpperCase();
+            
+            // Match H:MM or HH:MM with AM/PM
+            const match = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+            if (match) {
+                let hour = parseInt(match[1]);
+                const minute = match[2];
+                const period = match[3];
+                
+                // Convert to 12-hour display format with leading zero
+                let displayHour = hour;
+                if (hour === 0) displayHour = 12;
+                if (hour > 12) displayHour = hour - 12;
+                
+                const formattedHour = displayHour < 10 ? '0' + displayHour : String(displayHour);
+                return formattedHour + ':' + minute + ' ' + period;
+            }
+            return trimmed;
         }
 
         function validateForm() {
